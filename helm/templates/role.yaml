@@ -1,0 +1,26 @@
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+
+metadata:
+  name: registry-secret-manager
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+rules:
+  # Grant permissions to listen/watch to events
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "*"
+
+  # Grant permissions to allow Leader-Followed elections
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - "*"

@@ -1,0 +1,21 @@
+---
+
+image: werkspot/registry-secret-manager:latest
+replicas: 3
+
+resources:
+  cpu: 50m
+  memory: 300Mi
+
+#certificate:
+#  issuer: cert-manager ClusterIssuer name
+
+dockerHub:
+  # username: foo
+  # password: bar
+  endpoint: https://index.docker.io/v1/
+
+#ecr:
+#  region: eu-west-1
+#  accessKeyId: foo
+#  secretAccessKey: bar

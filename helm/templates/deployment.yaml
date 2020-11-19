@@ -1,0 +1,65 @@
+---
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: registry-secret-manager
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+spec:
+  replicas: {{ $.Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: registry-secret-manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: registry-secret-manager
+    spec:
+      serviceAccountName: registry-secret-manager
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534 # nobody
+
+      containers:
+        - name: controller
+          image: {{ $.Values.image }}
+          args:
+            - --cert-dir=/var/run/serving-certificates/
+          envFrom:
+            - secretRef:
+                name: registry-secret-manager
+          ports:
+            - name: healthz
+              containerPort: 8080
+            - name: metrics
+              containerPort: 8081
+            - name: controller
+              containerPort: 8443
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+          resources:
+            requests:
+              cpu: {{ $.Values.resources.cpu }}
+              memory: {{ $.Values.resources.memory }}
+            limits:
+              cpu: {{ $.Values.resources.cpu }}
+              memory: {{ $.Values.resources.memory }}
+          volumeMounts:
+            - name: certificates
+              mountPath: /var/run/serving-certificates
+              readOnly: true
+
+      volumes:
+        - name: certificates
+          secret:
+            secretName: registry-secret-manager-tls

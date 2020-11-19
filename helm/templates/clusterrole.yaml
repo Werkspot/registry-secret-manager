@@ -1,0 +1,19 @@
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+
+metadata:
+  name: registry-secret-manager
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+rules:
+  # Grant permissions to manage ServiceAccounts and Secrets
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - serviceaccounts
+    verbs:
+      - "*"

@@ -1,0 +1,31 @@
+---
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+
+metadata:
+  name: registry-secret-manager
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+webhooks:
+  - name: serviceaccount.registry-secret-manager.io
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - serviceaccounts
+    admissionReviewVersions:
+      - v1beta1
+    timeoutSeconds: 5
+    failurePolicy: Ignore # @TODO Make it resilient enough to Fail the mutation?
+    sideEffects: None
+    clientConfig:
+      service:
+        name: registry-secret-manager
+        namespace: {{ $.Release.Namespace }}
+        path: /mutate

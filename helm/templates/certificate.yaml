@@ -1,0 +1,19 @@
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+
+metadata:
+  name: registry-secret-manager-tls
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+spec:
+  commonName: registry-secret-manager
+  dnsNames:
+    - registry-secret-manager.{{ $.Release.Namespace }}
+    - registry-secret-manager.{{ $.Release.Namespace }}.svc
+  issuerRef:
+    kind: ClusterIssuer
+    name: {{ $.Values.certificate.issuer }}
+  secretName: registry-secret-manager-tls

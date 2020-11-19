@@ -1,0 +1,19 @@
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+
+metadata:
+  name: registry-secret-manager
+  labels:
+    app.kubernetes.io/name: registry-secret-manager
+
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: registry-secret-manager
+
+subjects:
+  - kind: ServiceAccount
+    name: registry-secret-manager
+    namespace: {{ $.Release.Namespace }}

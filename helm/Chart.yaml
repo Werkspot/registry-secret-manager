@@ -1,0 +1,6 @@
+apiVersion: v2
+name: registry-secret-manager
+description: Manages the creation and distribution of credentials for container registries
+type: application
+version: 0.1.0
+appVersion: 0.1.0

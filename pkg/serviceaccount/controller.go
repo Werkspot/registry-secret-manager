@@ -38,18 +38,6 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 		},
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
-			UpdateFunc: func(event event.UpdateEvent) bool {
-				// Skip this event when the generation hasn't changed
-				if event.ObjectOld.GetGeneration() == event.ObjectNew.GetGeneration() {
-					log.Debugf(
-						"Skipping reconciliation of ServiceAccount [%s/%s] as it hasn't changed",
-						event.ObjectNew.GetNamespace(),
-						event.ObjectNew.GetName(),
-					)
-					return false
-				}
-				return true
-			},
 			DeleteFunc: func(event event.DeleteEvent) bool {
 				log.Debugf(
 					"Skipping reconciliation of ServiceAccount [%s/%s] as it has been deleted",

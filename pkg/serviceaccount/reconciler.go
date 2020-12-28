@@ -3,6 +3,7 @@ package serviceaccount
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"registry-secret-manager/pkg/registry"
 	"registry-secret-manager/pkg/secret"
@@ -33,6 +34,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	serviceAccount := &corev1.ServiceAccount{}
 
 	err := r.client.Get(ctx, request.NamespacedName, serviceAccount)
+	if errors.IsNotFound(err) {
+		log.Debugf("Stopping reconciliation of ServiceAccount [%s] as it no longer exists: %v", request.NamespacedName, err)
+		return reconcile.Result{}, nil
+	}
 	if err != nil {
 		err = fmt.Errorf("could not fetch the ServiceAccount [%s]: %v", request.NamespacedName, err)
 		log.Error(err)

@@ -22,10 +22,7 @@ func TestReconcile(t *testing.T) {
 	}
 
 	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: SecretResource.Version,
-			Kind:       SecretResource.Kind,
-		},
+		TypeMeta: SecretTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       "registry-secret-manager",
 			Name:            "registry-secret",

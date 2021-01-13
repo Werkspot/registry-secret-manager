@@ -12,10 +12,12 @@ import (
 // See: https://github.com/kubernetes/kubernetes/issues/41727
 var defaultEmail = "technology@werkspot.nl"
 
+// DockerConfig stores a map of valid Authorization
 type DockerConfig struct {
 	Authorizations map[string]Authorization `json:"auths"`
 }
 
+// Authorization contains a valid set of credentials
 type Authorization struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -23,6 +25,7 @@ type Authorization struct {
 	Auth     string `json:"auth"`
 }
 
+// NewDockerConfig returns a pointer to DockerConfig
 func NewDockerConfig(registryCredentials []*registry.Credentials) *DockerConfig {
 	authorizations := map[string]Authorization{}
 

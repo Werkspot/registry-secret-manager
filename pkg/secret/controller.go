@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// NewController initializes a secret controller
 func NewController(mgr manager.Manager, registries []registry.Registry) error {
 	// Setup the reconciler
 	secretController, err := controller.New("secret", mgr, controller.Options{

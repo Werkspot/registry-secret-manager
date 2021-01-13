@@ -15,13 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var SecretResource = metav1.GroupVersionKind{
-	Group:   corev1.SchemeGroupVersion.Group,
-	Version: corev1.SchemeGroupVersion.Version,
-	Kind:    "Secret",
+// SecretTypeMeta containts the TypeMeta for a secret
+var SecretTypeMeta = metav1.TypeMeta{
+	APIVersion: corev1.SchemeGroupVersion.Version,
+	Kind:       "Secret",
 }
 
-// Create a secret on the given namespace if it doesn't already exist
+// CreateSecretIfNeeded on the given namespace if it doesn't already exist
 func CreateSecretIfNeeded(ctx context.Context, client client.Client, registries []reg.Registry, namespace string) error {
 	secretName := types.NamespacedName{
 		Namespace: namespace,
@@ -77,10 +77,7 @@ func createSecretObject(registries []reg.Registry, namespace string) (*corev1.Se
 	}
 
 	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: SecretResource.Version,
-			Kind:       SecretResource.Kind,
-		},
+		TypeMeta: SecretTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "registry-secret",

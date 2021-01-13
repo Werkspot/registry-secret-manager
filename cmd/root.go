@@ -109,6 +109,7 @@ func bindFlags(flag *pflag.Flag) {
 	viper.RegisterAlias(strings.ReplaceAll(flag.Name, "-", "_"), flag.Name)
 }
 
+// ClosureRegistry holds a closure that returns a Registry instance
 type ClosureRegistry func() registry.Registry
 
 func getAvailableRegistries() map[string]ClosureRegistry {
@@ -146,11 +147,12 @@ func getCommand() (c *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var registries []registry.Registry
 			for _, registryName := range viper.GetStringSlice("registry") {
-				if f, ok := availableRegistries[registryName]; !ok {
+				f, ok := availableRegistries[registryName]
+				if !ok {
 					return fmt.Errorf("unknown registry %s", registryName)
-				} else {
-					registries = append(registries, f())
 				}
+
+				registries = append(registries, f())
 			}
 
 			if len(registries) > 1 {

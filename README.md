@@ -16,6 +16,6 @@ $ helm upgrade registry-secret-manager --namespace registry-secret-manager --val
 - [x] Reconcile ServiceAccounts (create Secrets and inject its name in `ImagePullSecrets`)
 - [x] Reconcile Secrets (renew ECR tokens every 3 hours)
 - [ ] Optimize ECR token usage (now each request/reconcile performs a new login)
-- [ ] Make DockerHub and ECR registries optional
+- [x] Make DockerHub and ECR registries optional
 - [ ] Use the same logging client for Controller-Runtime, Kubernetes Client, Webhook and Reconcilers
 - [ ] Make the Helm Chart available somewhere

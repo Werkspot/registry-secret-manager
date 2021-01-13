@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
+const EcrName = "ecr"
+
 type ECR struct {
 }
 

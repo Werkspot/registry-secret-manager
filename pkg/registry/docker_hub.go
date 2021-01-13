@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const DockerHubName = "docker-hub"
+
 type DockerHub struct {
 }
 

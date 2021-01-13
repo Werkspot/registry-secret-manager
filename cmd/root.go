@@ -109,9 +109,29 @@ func bindFlags(flag *pflag.Flag) {
 	viper.RegisterAlias(strings.ReplaceAll(flag.Name, "-", "_"), flag.Name)
 }
 
+type ClosureRegistry func() registry.Registry
+
+func getAvailableRegistries() map[string]ClosureRegistry {
+	return map[string]ClosureRegistry{
+		registry.DockerHubName: func() registry.Registry {
+			return registry.NewDockerHub()
+		},
+		registry.EcrName: func() registry.Registry {
+			return registry.NewECR()
+		},
+	}
+}
+
 func getCommand() (c *cobra.Command) {
+	availableRegistries := getAvailableRegistries()
+	var keys []string
+	for k := range availableRegistries {
+		keys = append(keys, k)
+	}
+
 	pflag.String("cert-dir", "", "Directory that holds the tls.crt and tls.key files")
 	pflag.String("log-level", "warning", "Log verbosity level")
+	pflag.StringSlice("registry", nil, fmt.Sprintf("Define which registries should be enabled [%s]", strings.Join(keys, ",")))
 	pflag.Parse()
 
 	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
@@ -124,10 +144,17 @@ func getCommand() (c *cobra.Command) {
 		Use:   "registry-secret-manager",
 		Short: "Manages the creation and distribution of credentials for container registries",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			// Setup the container registries
-			registries := []registry.Registry{
-				registry.NewDockerHub(),
-				registry.NewECR(),
+			var registries []registry.Registry
+			for _, registryName := range viper.GetStringSlice("registry") {
+				if f, ok := availableRegistries[registryName]; !ok {
+					return fmt.Errorf("unknown registry %s", registryName)
+				} else {
+					registries = append(registries, f())
+				}
+			}
+
+			if len(registries) > 1 {
+				return fmt.Errorf("at least one registry must be defined")
 			}
 
 			// Setup the manager
@@ -145,21 +172,18 @@ func getCommand() (c *cobra.Command) {
 				LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
 			})
 			if err != nil {
-				err = fmt.Errorf("unable to set up overall controller manager: %v", err)
-				return
+				return fmt.Errorf("unable to set up overall controller manager: %v", err)
 			}
 
 			// Add healthz and readyz check
 			err = mgr.AddHealthzCheck("ping", healthz.Ping)
 			if err != nil {
-				err = fmt.Errorf("failed to add ping healthz check")
-				return
+				return fmt.Errorf("failed to add ping healthz check")
 			}
 
 			err = mgr.AddReadyzCheck("ping", healthz.Ping)
 			if err != nil {
-				err = fmt.Errorf("failed to add ping readyz check")
-				return
+				return fmt.Errorf("failed to add ping readyz check")
 			}
 
 			// Setup a new controller to reconcile ServiceAccounts
@@ -179,8 +203,7 @@ func getCommand() (c *cobra.Command) {
 
 			err = mgr.Start(signals.SetupSignalHandler())
 			if err != nil {
-				err = fmt.Errorf("unable to start manager: %v", err)
-				return
+				return fmt.Errorf("unable to start manager: %v", err)
 			}
 
 			return

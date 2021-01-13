@@ -72,10 +72,7 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 	if !mustCreateTheSecret {
 		// Secret is not created by the mutator
 		objects = append(objects, &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: secret.SecretResource.Version,
-				Kind:       secret.SecretResource.Kind,
-			},
+			TypeMeta: secret.SecretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       secretName.Namespace,
 				Name:            secretName.Name,
@@ -92,14 +89,14 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 	_ = mutator.InjectDecoder(decoder)
 
 	// Submit the request and verify the response
-	serviceAccountJson, _ := json.Marshal(target)
+	serviceAccountJSON, _ := json.Marshal(target)
 
 	request := admission.Request{
 		AdmissionRequest: v1beta1.AdmissionRequest{
 			Kind:      metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"},
 			Namespace: "registry-secret-manager",
 			Name:      "default",
-			Object:    runtime.RawExtension{Raw: serviceAccountJson},
+			Object:    runtime.RawExtension{Raw: serviceAccountJSON},
 		},
 	}
 	response := mutator.Handle(context.TODO(), request)

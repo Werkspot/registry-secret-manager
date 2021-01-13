@@ -59,10 +59,7 @@ func assertReconcile(t *testing.T, existing, expected *corev1.ServiceAccount, mu
 	if !mustCreateTheSecret {
 		// Secret is not created by the mutator
 		objects = append(objects, &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: secret.SecretResource.Version,
-				Kind:       secret.SecretResource.Kind,
-			},
+			TypeMeta: secret.SecretTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       secretName.Namespace,
 				Name:            secretName.Name,

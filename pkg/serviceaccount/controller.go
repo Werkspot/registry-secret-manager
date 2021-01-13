@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// NewController initializes a service account controller
 func NewController(mgr manager.Manager, registries []registry.Registry) error {
 	// Setup the webhooks
 	server := mgr.GetWebhookServer()

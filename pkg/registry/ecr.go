@@ -12,15 +12,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
+// EcrName contains a unique name
 const EcrName = "ecr"
 
+// ECR represents an ECR Registry
 type ECR struct {
 }
 
+// NewECR returns a pointer to ECR
 func NewECR() *ECR {
 	return &ECR{}
 }
 
+// Login returns a valid Credentials pointer and/or error
 func (e *ECR) Login() (*Credentials, error) {
 	config := aws.NewConfig()
 	config.WithRegion(os.Getenv("AWS_DEFAULT_REGION"))

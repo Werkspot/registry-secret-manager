@@ -155,7 +155,7 @@ func getCommand() (c *cobra.Command) {
 				registries = append(registries, f())
 			}
 
-			if len(registries) > 1 {
+			if len(registries) < 1 {
 				return fmt.Errorf("at least one registry must be defined")
 			}
 

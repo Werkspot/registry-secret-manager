@@ -31,3 +31,11 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
+
+      - name: Go tests
+        run: go test -race -v ./... -coverprofile=coverage.out -covermode=atomic
+
+      - uses: codecov/codecov-action@v1
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: true

@@ -39,6 +39,14 @@ linters:
     - test
     - unused
   fast: false
+  disable:
+    - gci
+    - lll
+    - exhaustivestruct
+    - prealloc
+    - goerr113
+    - scopelint
+    - funlen
 
 issues:
   # Maximum issues count per one linter (set to 0 to disable)

@@ -5,19 +5,18 @@ import (
 	"os"
 )
 
-// DockerHubName contains a unique name
+// DockerHubName contains a unique name.
 const DockerHubName = "docker-hub"
 
-// DockerHub represents a Docker Hub Registry
-type DockerHub struct {
-}
+// DockerHub represents a Docker Hub Registry.
+type DockerHub struct{}
 
-// NewDockerHub returns a pointer to DockerHub
+// NewDockerHub returns a pointer to DockerHub.
 func NewDockerHub() *DockerHub {
 	return &DockerHub{}
 }
 
-// Login returns a valid Credentials pointer and/or error
+// Login returns a valid Credentials pointer and/or error.
 func (d *DockerHub) Login() (*Credentials, error) {
 	username, err := d.retrieveEnvVar("DOCKER_HUB_USERNAME")
 	if err != nil {
@@ -42,8 +41,10 @@ func (d *DockerHub) retrieveEnvVar(key string) (string, error) {
 	if !present {
 		return value, fmt.Errorf("could not find environment value for %s", key)
 	}
+
 	if value == "" {
 		return value, fmt.Errorf("found empty environment value for %s", key)
 	}
+
 	return value, nil
 }

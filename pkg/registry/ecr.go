@@ -12,19 +12,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-// EcrName contains a unique name
+// EcrName contains a unique name.
 const EcrName = "ecr"
 
-// ECR represents an ECR Registry
-type ECR struct {
-}
+// ECR represents an ECR Registry.
+type ECR struct{}
 
-// NewECR returns a pointer to ECR
+// NewECR returns a pointer to ECR.
 func NewECR() *ECR {
 	return &ECR{}
 }
 
-// Login returns a valid Credentials pointer and/or error
+// Login returns a valid Credentials pointer and/or error.
 func (e *ECR) Login() (*Credentials, error) {
 	config := aws.NewConfig()
 	config.WithRegion(os.Getenv("AWS_DEFAULT_REGION"))
@@ -34,7 +33,7 @@ func (e *ECR) Login() (*Credentials, error) {
 		Config: *config,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new session: %v", err)
+		return nil, fmt.Errorf("failed to create new session: %w", err)
 	}
 
 	service := ecr.New(session)
@@ -42,12 +41,12 @@ func (e *ECR) Login() (*Credentials, error) {
 
 	token, err := service.GetAuthorizationToken(input)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get authorization token: %v", err)
+		return nil, fmt.Errorf("failed to get authorization token: %w", err)
 	}
 
 	decodedBytes, err := base64.StdEncoding.DecodeString(*token.AuthorizationData[0].AuthorizationToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to base64 decode the token: %v", err)
+		return nil, fmt.Errorf("failed to base64 decode the token: %w", err)
 	}
 
 	parts := strings.Split(string(decodedBytes), ":")

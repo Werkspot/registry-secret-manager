@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
 	"registry-secret-manager/pkg/registry"
 	"registry-secret-manager/pkg/secret"
 
@@ -15,21 +14,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-type mutator struct {
+type Mutator struct {
 	client     client.Client
 	registries []registry.Registry
 
 	decoder *admission.Decoder
 }
 
-func newMutator(client client.Client, registries []registry.Registry) *mutator {
-	return &mutator{
+func NewMutator(client client.Client, registries []registry.Registry) *Mutator {
+	return &Mutator{
 		client:     client,
 		registries: registries,
 	}
 }
 
-func (m *mutator) Handle(ctx context.Context, request admission.Request) admission.Response {
+func (m *Mutator) Handle(ctx context.Context, request admission.Request) admission.Response {
 	log.Debugf("Received request to mutate ServiceAccount [%s/%s]", request.Namespace, request.Name)
 
 	// Decode the ServiceAccount from the request
@@ -37,8 +36,9 @@ func (m *mutator) Handle(ctx context.Context, request admission.Request) admissi
 
 	err := m.decoder.Decode(request, serviceAccount)
 	if err != nil {
-		err = fmt.Errorf("failed to decode ServiceAccount [%s/%s]: %v", request.Namespace, request.Namespace, err)
+		err = fmt.Errorf("failed to decode ServiceAccount [%s/%s]: %w", request.Namespace, request.Namespace, err)
 		log.Error(err)
+
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -47,8 +47,9 @@ func (m *mutator) Handle(ctx context.Context, request admission.Request) admissi
 	if err != nil {
 		// We should not prevent the ServiceAccount from being mutated if the Secret creation fails.
 		// This is safe to do as the Reconciler will attempt to create the Secret anyway.
-		err := fmt.Errorf("failed to create the secret, but ignoring the error: %v", err)
+		err := fmt.Errorf("failed to create the secret, but ignoring the error: %w", err)
 		log.Error(err)
+
 		return admission.Errored(http.StatusFailedDependency, err)
 	}
 
@@ -56,6 +57,7 @@ func (m *mutator) Handle(ctx context.Context, request admission.Request) admissi
 	if !needsMutation(serviceAccount) {
 		reason := fmt.Sprintf("No mutation needed for ServiceAccount [%s/%s]", request.Namespace, request.Name)
 		log.Debug(reason)
+
 		return admission.Allowed(reason)
 	}
 
@@ -68,15 +70,17 @@ func (m *mutator) Handle(ctx context.Context, request admission.Request) admissi
 
 	patched, err := json.Marshal(serviceAccount)
 	if err != nil {
-		err = fmt.Errorf("failed to marshall ServiceAccount [%s/%s]: %v", request.Namespace, request.Namespace, err)
+		err = fmt.Errorf("failed to marshall ServiceAccount [%s/%s]: %w", request.Namespace, request.Namespace, err)
 		log.Error(err)
+
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	return admission.PatchResponseFromRaw(request.Object.Raw, patched)
 }
 
-func (m *mutator) InjectDecoder(decoder *admission.Decoder) error {
+func (m *Mutator) InjectDecoder(decoder *admission.Decoder) (err error) {
 	m.decoder = decoder
-	return nil
+
+	return
 }

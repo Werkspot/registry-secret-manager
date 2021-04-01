@@ -1,52 +1,82 @@
-package serviceaccount
+package serviceaccount_test
 
 import (
 	"context"
+	"registry-secret-manager/pkg/serviceaccount"
 	"strconv"
 	"testing"
-
-	"registry-secret-manager/pkg/secret"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func TestReconcile(t *testing.T) {
-	tests := map[string]struct {
-		existing *corev1.ServiceAccount
-		expected *corev1.ServiceAccount
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		mustCreateSecret bool
+		existing         *corev1.ServiceAccount
+		expected         *corev1.ServiceAccount
 	}{
-		"no patch needed": {
-			existing: newServiceAccount(1, "registry-secret"),
-			expected: newServiceAccount(1, "registry-secret"),
+		{
+			name:             "no patch needed, must create the secret",
+			mustCreateSecret: true,
+			existing:         newServiceAccount(1, "registry-secret"),
+			expected:         newServiceAccount(1, "registry-secret"),
 		},
-		"no secrets at all": {
-			existing: newServiceAccount(1),
-			expected: newServiceAccount(2, "registry-secret"),
+		{
+			name:             "no secrets at all, must create the secret",
+			mustCreateSecret: true,
+			existing:         newServiceAccount(1),
+			expected:         newServiceAccount(2, "registry-secret"),
 		},
-		"no secrets managed by us": {
-			existing: newServiceAccount(1, "not-managed-by-us"),
-			expected: newServiceAccount(2, "not-managed-by-us", "registry-secret"),
+		{
+			name:             "no secrets managed by us, must create the secret",
+			mustCreateSecret: true,
+			existing:         newServiceAccount(1, "not-managed-by-us"),
+			expected:         newServiceAccount(2, "not-managed-by-us", "registry-secret"),
+		},
+
+		{
+			name:             "no patch needed, must not create the secret",
+			mustCreateSecret: false,
+			existing:         newServiceAccount(1, "registry-secret"),
+			expected:         newServiceAccount(1, "registry-secret"),
+		},
+		{
+			name:             "no secrets at all, must not create the secret",
+			mustCreateSecret: false,
+			existing:         newServiceAccount(1),
+			expected:         newServiceAccount(2, "registry-secret"),
+		},
+		{
+			name:             "no secrets managed by us, must not create the secret",
+			mustCreateSecret: false,
+			existing:         newServiceAccount(1, "not-managed-by-us"),
+			expected:         newServiceAccount(2, "not-managed-by-us", "registry-secret"),
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name+", must create the secret", func(t *testing.T) {
-			assertReconcile(t, test.existing, test.expected, true)
-		})
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-		t.Run(name+", must not create the secret", func(t *testing.T) {
-			assertReconcile(t, test.existing, test.expected, false)
+			assertReconcile(t, test.existing, test.expected, test.mustCreateSecret)
 		})
 	}
 }
 
 func assertReconcile(t *testing.T, existing, expected *corev1.ServiceAccount, mustCreateTheSecret bool) {
+	t.Helper()
+
 	secretName := types.NamespacedName{
 		Namespace: "registry-secret-manager",
 		Name:      "registry-secret",
@@ -59,7 +89,10 @@ func assertReconcile(t *testing.T, existing, expected *corev1.ServiceAccount, mu
 	if !mustCreateTheSecret {
 		// Secret is not created by the mutator
 		objects = append(objects, &corev1.Secret{
-			TypeMeta: secret.SecretTypeMeta,
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.Version,
+				Kind:       "Secret",
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       secretName.Namespace,
 				Name:            secretName.Name,
@@ -70,7 +103,7 @@ func assertReconcile(t *testing.T, existing, expected *corev1.ServiceAccount, mu
 
 	// Create a client and the reconciler
 	fakeClient := fake.NewFakeClient(objects...)
-	reconciler := newReconciler(fakeClient, nil)
+	reconciler := serviceaccount.NewReconciler(fakeClient, nil)
 
 	// Reconcile and verify its content
 	request := reconcile.Request{

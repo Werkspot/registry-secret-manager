@@ -3,21 +3,20 @@ package secret
 import (
 	"encoding/base64"
 	"fmt"
-
 	"registry-secret-manager/pkg/registry"
 )
 
 // Having an email set in the configuration is mandatory and without it the authentication will fail.
 // However, any valid email can be used.
 // See: https://github.com/kubernetes/kubernetes/issues/41727
-var defaultEmail = "technology@werkspot.nl"
+const DefaultEmail = "technology@werkspot.nl"
 
-// DockerConfig stores a map of valid Authorization
+// DockerConfig stores a map of valid Authorization.
 type DockerConfig struct {
 	Authorizations map[string]Authorization `json:"auths"`
 }
 
-// Authorization contains a valid set of credentials
+// Authorization contains a valid set of credentials.
 type Authorization struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -25,7 +24,7 @@ type Authorization struct {
 	Auth     string `json:"auth"`
 }
 
-// NewDockerConfig returns a pointer to DockerConfig
+// NewDockerConfig returns a pointer to DockerConfig.
 func NewDockerConfig(registryCredentials []*registry.Credentials) *DockerConfig {
 	authorizations := map[string]Authorization{}
 
@@ -36,7 +35,7 @@ func NewDockerConfig(registryCredentials []*registry.Credentials) *DockerConfig 
 		authorizations[credentials.Endpoint] = Authorization{
 			Username: credentials.Username,
 			Password: credentials.Password,
-			Email:    defaultEmail,
+			Email:    DefaultEmail,
 			Auth:     base64.StdEncoding.EncodeToString(tokenBytes),
 		}
 	}

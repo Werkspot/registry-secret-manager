@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
 	"registry-secret-manager/pkg/registry"
 	"registry-secret-manager/pkg/secret"
 	"registry-secret-manager/pkg/serviceaccount"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
@@ -16,22 +15,28 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
-// Config holds the application configuration
+const ManagerPort = 8443
+
+// Config holds the application configuration.
 type Config struct{}
 
-// RegistrySecretManager main application
+// RegistrySecretManager main application.
 type RegistrySecretManager struct {
 	config  Config
 	command *cobra.Command
 }
 
-// NewRegistrySecretManager returns a pointer to RegistrySecretManager
+// ClosureRegistry holds a closure that returns a Registry instance.
+type ClosureRegistry func() registry.Registry
+
+// NewRegistrySecretManager returns a pointer to RegistrySecretManager.
 func NewRegistrySecretManager() *RegistrySecretManager {
 	cfg, err := readConfig()
 	if err != nil {
@@ -44,7 +49,7 @@ func NewRegistrySecretManager() *RegistrySecretManager {
 	}
 }
 
-// Run the main application
+// Run the main application.
 func (app *RegistrySecretManager) Run() int {
 	app.command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		return app.initLogger()
@@ -52,6 +57,7 @@ func (app *RegistrySecretManager) Run() int {
 
 	if err := app.command.Execute(); err != nil {
 		log.Error(err)
+
 		return 1
 	}
 
@@ -98,6 +104,7 @@ func readConfig() (config Config, err error) {
 	if err = viper.ReadInConfig(); err != nil {
 		return
 	}
+
 	if err = viper.Unmarshal(&config); err != nil {
 		return
 	}
@@ -108,9 +115,6 @@ func readConfig() (config Config, err error) {
 func bindFlags(flag *pflag.Flag) {
 	viper.RegisterAlias(strings.ReplaceAll(flag.Name, "-", "_"), flag.Name)
 }
-
-// ClosureRegistry holds a closure that returns a Registry instance
-type ClosureRegistry func() registry.Registry
 
 func getAvailableRegistries() map[string]ClosureRegistry {
 	return map[string]ClosureRegistry{
@@ -125,6 +129,7 @@ func getAvailableRegistries() map[string]ClosureRegistry {
 
 func getCommand() (c *cobra.Command) {
 	availableRegistries := getAvailableRegistries()
+
 	var keys []string
 	for k := range availableRegistries {
 		keys = append(keys, k)
@@ -145,24 +150,15 @@ func getCommand() (c *cobra.Command) {
 		Use:   "registry-secret-manager",
 		Short: "Manages the creation and distribution of credentials for container registries",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			var registries []registry.Registry
-			for _, registryName := range viper.GetStringSlice("registry") {
-				f, ok := availableRegistries[registryName]
-				if !ok {
-					return fmt.Errorf("unknown registry %s", registryName)
-				}
-
-				registries = append(registries, f())
-			}
-
-			if len(registries) < 1 {
-				return fmt.Errorf("at least one registry must be defined")
+			registries, err := parseEnabledRegistries(availableRegistries)
+			if err != nil {
+				return err
 			}
 
 			// Setup the manager
 			mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 				Host:    "",
-				Port:    8443,
+				Port:    ManagerPort,
 				CertDir: viper.GetString("cert-dir"),
 
 				HealthProbeBindAddress: ":8080",
@@ -174,7 +170,7 @@ func getCommand() (c *cobra.Command) {
 				LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
 			})
 			if err != nil {
-				return fmt.Errorf("unable to set up overall controller manager: %v", err)
+				return fmt.Errorf("unable to set up overall controller manager: %w", err)
 			}
 
 			// Add healthz and readyz check
@@ -205,10 +201,27 @@ func getCommand() (c *cobra.Command) {
 
 			err = mgr.Start(signals.SetupSignalHandler())
 			if err != nil {
-				return fmt.Errorf("unable to start manager: %v", err)
+				return fmt.Errorf("unable to start manager: %w", err)
 			}
 
 			return
 		},
 	}
+}
+
+func parseEnabledRegistries(availableRegistries map[string]ClosureRegistry) (registries []registry.Registry, err error) {
+	for _, registryName := range viper.GetStringSlice("registry") {
+		f, ok := availableRegistries[registryName]
+		if !ok {
+			return nil, fmt.Errorf("unknown registry %s", registryName)
+		}
+
+		registries = append(registries, f())
+	}
+
+	if len(registries) < 1 {
+		return nil, fmt.Errorf("at least one registry must be defined")
+	}
+
+	return
 }

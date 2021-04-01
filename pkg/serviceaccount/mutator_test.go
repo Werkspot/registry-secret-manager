@@ -1,11 +1,10 @@
-package serviceaccount
+package serviceaccount_test
 
 import (
 	"context"
 	"encoding/json"
+	"registry-secret-manager/pkg/serviceaccount"
 	"testing"
-
-	"registry-secret-manager/pkg/secret"
 
 	"github.com/stretchr/testify/assert"
 	"gomodules.xyz/jsonpatch/v2"
@@ -15,34 +14,73 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func TestHandle(t *testing.T) {
+	t.Parallel()
+
 	jsonPatchType := v1beta1.PatchTypeJSONPatch
 
-	tests := map[string]struct {
-		target    *corev1.ServiceAccount
-		patchType *v1beta1.PatchType
-		patch     []jsonpatch.JsonPatchOperation
+	tests := []struct {
+		name             string
+		mustCreateSecret bool
+		target           *corev1.ServiceAccount
+		patchType        *v1beta1.PatchType
+		patch            []jsonpatch.JsonPatchOperation
 	}{
-		"no patch needed": {
-			target: newServiceAccount(1, "registry-secret"),
+		{
+			name:             "no patch needed, must create the secret",
+			mustCreateSecret: true,
+			target:           newServiceAccount(1, "registry-secret"),
 		},
-		"no secrets at all": {
-			target:    newServiceAccount(1),
-			patchType: &jsonPatchType,
+		{
+			name:             "no secrets at all, must create the secret",
+			mustCreateSecret: true,
+			target:           newServiceAccount(1),
+			patchType:        &jsonPatchType,
 			patch: []jsonpatch.JsonPatchOperation{{
 				Operation: "add",
 				Path:      "/imagePullSecrets",
 				Value:     []interface{}{map[string]interface{}{"name": "registry-secret"}},
 			}},
 		},
-		"no secrets managed by us": {
-			target:    newServiceAccount(1, "not-managed-by-us"),
-			patchType: &jsonPatchType,
+		{
+			name:             "no secrets managed by us, must create the secret",
+			mustCreateSecret: true,
+			target:           newServiceAccount(1, "not-managed-by-us"),
+			patchType:        &jsonPatchType,
+			patch: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/imagePullSecrets/1",
+				Value:     map[string]interface{}{"name": "registry-secret"},
+			}},
+		},
+
+		{
+			name:             "no patch needed, must not create the secret",
+			mustCreateSecret: false,
+			target:           newServiceAccount(1, "registry-secret"),
+		},
+		{
+			name:             "no secrets at all, must not create the secret",
+			mustCreateSecret: false,
+			target:           newServiceAccount(1),
+			patchType:        &jsonPatchType,
+			patch: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/imagePullSecrets",
+				Value:     []interface{}{map[string]interface{}{"name": "registry-secret"}},
+			}},
+		},
+		{
+			name:             "no secrets managed by us, must not create the secret",
+			mustCreateSecret: false,
+			target:           newServiceAccount(1, "not-managed-by-us"),
+			patchType:        &jsonPatchType,
 			patch: []jsonpatch.JsonPatchOperation{{
 				Operation: "add",
 				Path:      "/imagePullSecrets/1",
@@ -51,18 +89,19 @@ func TestHandle(t *testing.T) {
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name+", must create the secret", func(t *testing.T) {
-			assertMutate(t, test.target, test.patchType, test.patch, true)
-		})
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-		t.Run(name+", must not create the secret", func(t *testing.T) {
-			assertMutate(t, test.target, test.patchType, test.patch, false)
+			assertMutate(t, test.target, test.patchType, test.patch, test.mustCreateSecret)
 		})
 	}
 }
 
 func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta1.PatchType, patch []jsonpatch.JsonPatchOperation, mustCreateTheSecret bool) {
+	t.Helper()
+
 	secretName := types.NamespacedName{
 		Namespace: "registry-secret-manager",
 		Name:      "registry-secret",
@@ -72,7 +111,10 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 	if !mustCreateTheSecret {
 		// Secret is not created by the mutator
 		objects = append(objects, &corev1.Secret{
-			TypeMeta: secret.SecretTypeMeta,
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.Version,
+				Kind:       "Secret",
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       secretName.Namespace,
 				Name:            secretName.Name,
@@ -83,7 +125,7 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 
 	// Create a client and the mutator
 	fakeClient := fake.NewFakeClient(objects...)
-	mutator := newMutator(fakeClient, nil)
+	mutator := serviceaccount.NewMutator(fakeClient, nil)
 
 	decoder, _ := admission.NewDecoder(scheme.Scheme)
 	_ = mutator.InjectDecoder(decoder)

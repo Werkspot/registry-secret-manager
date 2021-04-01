@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-
 	"registry-secret-manager/cmd"
 )
 

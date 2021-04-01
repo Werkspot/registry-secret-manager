@@ -1,24 +1,29 @@
-package secret
+package secret_test
 
 import (
 	"encoding/json"
-	"testing"
-
 	"registry-secret-manager/pkg/registry"
+	"registry-secret-manager/pkg/secret"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDockerConfig(t *testing.T) {
-	tests := map[string]struct {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
 		credentials []*registry.Credentials
 		expected    string
 	}{
-		"empty credentials": {
+		{
+			name:        "empty credentials",
 			credentials: nil,
 			expected:    `{"auths":{}}`,
 		},
-		"one credential": {
+		{
+			name: "one credential",
 			credentials: []*registry.Credentials{
 				{
 					Username: "user",
@@ -26,9 +31,10 @@ func TestNewDockerConfig(t *testing.T) {
 					Endpoint: "https://foo.bar",
 				},
 			},
-			expected: `{"auths":{"https://foo.bar":{"username":"user","password":"pass","email":"` + defaultEmail + `","auth":"dXNlcjpwYXNz"}}}`,
+			expected: `{"auths":{"https://foo.bar":{"username":"user","password":"pass","email":"` + secret.DefaultEmail + `","auth":"dXNlcjpwYXNz"}}}`,
 		},
-		"more than one credential": {
+		{
+			name: "more than one credential",
 			credentials: []*registry.Credentials{
 				{
 					Username: "one",
@@ -42,15 +48,18 @@ func TestNewDockerConfig(t *testing.T) {
 				},
 			},
 			expected: `{"auths":{` +
-				`"https://foo.bar/one":{"username":"one","password":"pass","email":"` + defaultEmail + `","auth":"b25lOnBhc3M="},` +
-				`"https://foo.bar/two":{"username":"two","password":"pass","email":"` + defaultEmail + `","auth":"dHdvOnBhc3M="}}}`,
+				`"https://foo.bar/one":{"username":"one","password":"pass","email":"` + secret.DefaultEmail + `","auth":"b25lOnBhc3M="},` +
+				`"https://foo.bar/two":{"username":"two","password":"pass","email":"` + secret.DefaultEmail + `","auth":"dHdvOnBhc3M="}}}`,
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			secret := NewDockerConfig(test.credentials)
-			result, err := json.Marshal(secret)
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := secret.NewDockerConfig(test.credentials)
+			result, err := json.Marshal(s)
 
 			assert.NoError(t, err)
 			assert.Equal(t, string(result), test.expected)

@@ -15,13 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SecretTypeMeta containts the TypeMeta for a secret
-var SecretTypeMeta = metav1.TypeMeta{
-	APIVersion: corev1.SchemeGroupVersion.Version,
-	Kind:       "Secret",
-}
-
-// CreateSecretIfNeeded on the given namespace if it doesn't already exist
+// CreateSecretIfNeeded on the given namespace if it doesn't already exist.
 func CreateSecretIfNeeded(ctx context.Context, client client.Client, registries []reg.Registry, namespace string) error {
 	secretName := types.NamespacedName{
 		Namespace: namespace,
@@ -32,52 +26,60 @@ func CreateSecretIfNeeded(ctx context.Context, client client.Client, registries 
 	err := client.Get(ctx, secretName, secret)
 	if err == nil {
 		log.Debugf("No need to create the already existing Secret [%s]", secretName)
+
 		return nil
 	}
+
 	if !errors.IsNotFound(err) {
-		return fmt.Errorf("could not fetch the Secret [%s]: %v", secretName, err)
+		return fmt.Errorf("could not fetch the Secret [%s]: %w", secretName, err)
 	}
 
 	// Secret is not found, we create it now
 	secret, err = createSecretObject(registries, namespace)
 	if err != nil {
-		return fmt.Errorf("failed to create Secret [%s]: %v", secretName, err)
+		return fmt.Errorf("failed to create Secret [%s]: %w", secretName, err)
 	}
 
 	err = client.Create(ctx, secret)
 	if err == nil {
-		log.Infof("Sucessfully created the Secret [%s]", secretName)
+		log.Infof("Successfully created the Secret [%s]", secretName)
+
 		return nil
 	}
+
 	if errors.IsAlreadyExists(err) {
 		// Because creating the object and the secret can take some time it is possible that another process already
 		// created the desired Secret. We can safely ignore the error.
 		log.Debugf("No need to create the already existing Secret [%s]", secretName)
+
 		return nil
 	}
 
-	return fmt.Errorf("could not create Secret [%s]: %v", secretName, err)
+	return fmt.Errorf("could not create Secret [%s]: %w", secretName, err)
 }
 
 func createSecretObject(registries []reg.Registry, namespace string) (*corev1.Secret, error) {
 	var registryCredentials []*reg.Credentials
+
 	for _, registry := range registries {
 		credentials, err := registry.Login()
 		if err != nil {
-			return nil, fmt.Errorf("failed to login: %v", err)
+			return nil, fmt.Errorf("failed to login: %w", err)
 		}
 
 		registryCredentials = append(registryCredentials, credentials)
 	}
 
-	dockerConfig := NewDockerConfig(registryCredentials)
-	dockerConfigBytes, err := json.Marshal(dockerConfig)
+	dockerConfigBytes, err := json.Marshal(NewDockerConfig(registryCredentials))
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshall json: %v", err)
+		return nil, fmt.Errorf("failed to marshall json: %w", err)
 	}
 
 	secret := &corev1.Secret{
-		TypeMeta: SecretTypeMeta,
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.Version,
+			Kind:       "Secret",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "registry-secret",

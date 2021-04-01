@@ -2,12 +2,12 @@ package secret
 
 import (
 	"fmt"
-
 	"registry-secret-manager/pkg/registry"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -16,14 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// NewController initializes a secret controller
+// NewController initializes a secret controller.
 func NewController(mgr manager.Manager, registries []registry.Registry) error {
 	// Setup the reconciler
 	secretController, err := controller.New("secret", mgr, controller.Options{
-		Reconciler: newReconciler(mgr.GetClient(), registries),
+		Reconciler: NewReconciler(mgr.GetClient(), registries),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up Secret controller: %v", err)
+		return fmt.Errorf("unable to set up Secret controller: %w", err)
 	}
 
 	// Only handle the Secrets that matches these labels
@@ -34,7 +34,7 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create label selector for Secrets: %v", err)
+		return fmt.Errorf("unable to create label selector for Secrets: %w", err)
 	}
 
 	// Watch Secrets and enqueue Secret object key
@@ -55,6 +55,7 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 					event.ObjectNew.GetNamespace(),
 					event.ObjectNew.GetName(),
 				)
+
 				return false
 			},
 			DeleteFunc: func(event event.DeleteEvent) bool {
@@ -63,6 +64,7 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 					event.Object.GetNamespace(),
 					event.Object.GetName(),
 				)
+
 				return false
 			},
 			GenericFunc: func(event event.GenericEvent) bool {
@@ -71,12 +73,13 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 					event.Object.GetNamespace(),
 					event.Object.GetName(),
 				)
+
 				return false
 			},
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("unable to watch Secrets: %v", err)
+		return fmt.Errorf("unable to watch Secrets: %w", err)
 	}
 
 	return nil

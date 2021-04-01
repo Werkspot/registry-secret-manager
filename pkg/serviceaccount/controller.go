@@ -2,11 +2,11 @@ package serviceaccount
 
 import (
 	"fmt"
-
 	"registry-secret-manager/pkg/registry"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -16,20 +16,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// NewController initializes a service account controller
+// NewController initializes a service account controller.
 func NewController(mgr manager.Manager, registries []registry.Registry) error {
 	// Setup the webhooks
 	server := mgr.GetWebhookServer()
 	server.Register("/mutate", &webhook.Admission{
-		Handler: newMutator(mgr.GetClient(), registries),
+		Handler: NewMutator(mgr.GetClient(), registries),
 	})
 
 	// Setup the reconciler
 	serviceAccountController, err := controller.New("serviceaccount", mgr, controller.Options{
-		Reconciler: newReconciler(mgr.GetClient(), registries),
+		Reconciler: NewReconciler(mgr.GetClient(), registries),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up ServiceAccount controller: %v", err)
+		return fmt.Errorf("unable to set up ServiceAccount controller: %w", err)
 	}
 
 	// Watch ServiceAccounts and enqueue ServiceAccount object key
@@ -45,6 +45,7 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 					event.Object.GetNamespace(),
 					event.Object.GetName(),
 				)
+
 				return false
 			},
 			GenericFunc: func(event event.GenericEvent) bool {
@@ -53,12 +54,13 @@ func NewController(mgr manager.Manager, registries []registry.Registry) error {
 					event.Object.GetNamespace(),
 					event.Object.GetName(),
 				)
+
 				return false
 			},
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("unable to watch ServiceAccounts: %v", err)
+		return fmt.Errorf("unable to watch ServiceAccounts: %w", err)
 	}
 
 	return nil

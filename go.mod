@@ -11,8 +11,8 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	gomodules.xyz/jsonpatch/v2 v2.1.0
-	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.20.4
-	k8s.io/client-go v0.20.4
-	sigs.k8s.io/controller-runtime v0.7.0-alpha.6
+	k8s.io/api v0.21.0
+	k8s.io/apimachinery v0.21.0
+	k8s.io/client-go v0.21.0
+	sigs.k8s.io/controller-runtime v0.9.0-beta.5
 )

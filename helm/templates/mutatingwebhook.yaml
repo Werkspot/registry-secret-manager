@@ -20,7 +20,7 @@ webhooks:
         resources:
           - serviceaccounts
     admissionReviewVersions:
-      - v1beta1
+      - v1
     timeoutSeconds: 5
     failurePolicy: Ignore # @TODO Make it resilient enough to Fail the mutation?
     sideEffects: None

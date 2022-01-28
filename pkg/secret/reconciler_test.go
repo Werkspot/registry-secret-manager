@@ -24,7 +24,7 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	s := &corev1.Secret{
+	secretObject := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.Version,
 			Kind:       "Secret",
@@ -36,7 +36,10 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	fakeClient := fake.NewFakeClient(s)
+	fakeClientBuilder := fake.NewClientBuilder()
+	fakeClientBuilder.WithObjects(secretObject)
+
+	fakeClient := fakeClientBuilder.Build()
 	reconciler := secret.NewReconciler(fakeClient, nil)
 
 	// Reconcile and verify its content
@@ -47,10 +50,10 @@ func TestReconcile(t *testing.T) {
 	assert.Equal(t, secret.ReconcileAfter, result.RequeueAfter)
 
 	// Retrieve and verify if the Secret was updated
-	s = &corev1.Secret{}
-	err = fakeClient.Get(context.TODO(), request.NamespacedName, s)
+	secretObject = &corev1.Secret{}
+	err = fakeClient.Get(context.TODO(), request.NamespacedName, secretObject)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "2", s.ResourceVersion)
-	assert.Equal(t, corev1.SecretTypeDockerConfigJson, s.Type)
+	assert.Equal(t, "2", secretObject.ResourceVersion)
+	assert.Equal(t, corev1.SecretTypeDockerConfigJson, secretObject.Type)
 }

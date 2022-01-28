@@ -101,8 +101,10 @@ func assertReconcile(t *testing.T, existing, expected *corev1.ServiceAccount, mu
 		})
 	}
 
-	// Create a client and the reconciler
-	fakeClient := fake.NewFakeClient(objects...)
+	fakeClientBuilder := fake.NewClientBuilder()
+	fakeClientBuilder.WithObjects(objects...)
+
+	fakeClient := fakeClientBuilder.Build()
 	reconciler := serviceaccount.NewReconciler(fakeClient, nil)
 
 	// Reconcile and verify its content

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gomodules.xyz/jsonpatch/v2"
-	"k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,13 +23,13 @@ import (
 func TestHandle(t *testing.T) {
 	t.Parallel()
 
-	jsonPatchType := v1beta1.PatchTypeJSONPatch
+	jsonPatchType := admissionv1.PatchTypeJSONPatch
 
 	tests := []struct {
 		name             string
 		mustCreateSecret bool
 		target           *corev1.ServiceAccount
-		patchType        *v1beta1.PatchType
+		patchType        *admissionv1.PatchType
 		patch            []jsonpatch.JsonPatchOperation
 	}{
 		{
@@ -99,7 +99,7 @@ func TestHandle(t *testing.T) {
 	}
 }
 
-func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta1.PatchType, patch []jsonpatch.JsonPatchOperation, mustCreateTheSecret bool) {
+func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *admissionv1.PatchType, patch []jsonpatch.JsonPatchOperation, mustCreateTheSecret bool) {
 	t.Helper()
 
 	secretName := types.NamespacedName{
@@ -123,18 +123,21 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 		})
 	}
 
-	// Create a client and the mutator
-	fakeClient := fake.NewFakeClient(objects...)
+	fakeClientBuilder := fake.NewClientBuilder()
+	fakeClientBuilder.WithObjects(objects...)
+
+	fakeClient := fakeClientBuilder.Build()
 	mutator := serviceaccount.NewMutator(fakeClient, nil)
 
 	decoder, _ := admission.NewDecoder(scheme.Scheme)
 	_ = mutator.InjectDecoder(decoder)
 
 	// Submit the request and verify the response
-	serviceAccountJSON, _ := json.Marshal(target)
+	serviceAccountJSON, err := json.Marshal(target)
+	assert.NoError(t, err)
 
 	request := admission.Request{
-		AdmissionRequest: v1beta1.AdmissionRequest{
+		AdmissionRequest: admissionv1.AdmissionRequest{
 			Kind:      metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"},
 			Namespace: "registry-secret-manager",
 			Name:      "default",
@@ -149,7 +152,7 @@ func assertMutate(t *testing.T, target *corev1.ServiceAccount, patchType *v1beta
 
 	// Check if the secret was created or updated, either way ResourceVersion should always be 1
 	var desiredSecret corev1.Secret
-	err := fakeClient.Get(context.TODO(), secretName, &desiredSecret)
+	err = fakeClient.Get(context.TODO(), secretName, &desiredSecret)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "1", desiredSecret.ResourceVersion)

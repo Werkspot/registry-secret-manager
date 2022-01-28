@@ -81,7 +81,7 @@ func (app *RegistrySecretManager) initLogger() (err error) {
 }
 
 func readConfig() (config Config, err error) {
-	ex, err := os.Executable()
+	executable, err := os.Executable()
 	if err != nil {
 		return
 	}
@@ -92,7 +92,7 @@ func readConfig() (config Config, err error) {
 	}
 
 	viper.AddConfigPath(".")
-	viper.AddConfigPath(filepath.Dir(ex))
+	viper.AddConfigPath(filepath.Dir(executable))
 	viper.AddConfigPath(home)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")

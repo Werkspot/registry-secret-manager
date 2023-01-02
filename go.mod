@@ -3,7 +3,7 @@ module registry-secret-manager
 go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.42.43
+	github.com/aws/aws-sdk-go v1.44.171
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
@@ -52,11 +52,11 @@ require (
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
+	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/term v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

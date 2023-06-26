@@ -26,6 +26,14 @@ spec:
         runAsNonRoot: true
         runAsUser: 65534 # nobody
 
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: registry-secret-manager
+
       containers:
         - name: controller
           image: {{ $.Values.image }}

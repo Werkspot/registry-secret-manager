@@ -3,11 +3,8 @@ package registry
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	cred "github.com/aws/aws-sdk-go/aws/credentials"
 	sess "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
@@ -25,13 +22,7 @@ func NewECR() *ECR {
 
 // Login returns a valid Credentials pointer and/or error.
 func (e *ECR) Login() (*Credentials, error) {
-	config := aws.NewConfig()
-	config.WithRegion(os.Getenv("AWS_DEFAULT_REGION"))
-	config.WithCredentials(cred.NewEnvCredentials())
-
-	session, err := sess.NewSessionWithOptions(sess.Options{
-		Config: *config,
-	})
+	session, err := sess.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %w", err)
 	}

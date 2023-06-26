@@ -10,7 +10,7 @@
     },
     "resources": {
       "type": "object",
-      "properties":{
+      "properties": {
         "cpu": {
           "type": "string"
         },
@@ -64,12 +64,25 @@
         },
         "secretAccessKey": {
           "type": "string"
+        },
+        "role": {
+          "type": "string"
         }
       },
-      "required": [
-        "region",
-        "accessKeyId",
-        "secretAccessKey"
+      "oneOf": [
+        {
+          "required": [
+            "region",
+            "accessKeyId",
+            "secretAccessKey"
+          ]
+        },
+        {
+          "required": [
+            "region",
+            "role"
+          ]
+        }
       ]
     }
   },

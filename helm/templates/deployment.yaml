@@ -17,6 +17,8 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: registry-secret-manager
+      annotations:
+        checksum/secret.yaml: {{ include (print $.Template.BasePath "/secret.yaml") $ | sha256sum }}
     spec:
       serviceAccountName: registry-secret-manager
 

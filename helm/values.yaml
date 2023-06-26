@@ -17,5 +17,8 @@ dockerHub:
 
 #ecr:
 #  region: eu-west-1
+## Using Access Keys
 #  accessKeyId: foo
 #  secretAccessKey: bar
+## Assuming a role
+#  role: foo

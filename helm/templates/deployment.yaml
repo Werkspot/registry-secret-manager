@@ -29,6 +29,7 @@ spec:
           image: {{ $.Values.image }}
           args:
             - --cert-dir=/var/run/serving-certificates/
+            - --registry=docker-hub,ecr
           envFrom:
             - secretRef:
                 name: registry-secret-manager
@@ -58,8 +59,21 @@ spec:
             - name: certificates
               mountPath: /var/run/serving-certificates
               readOnly: true
+            {{- if $.Values.ecr.role }}
+            - name: aws-token
+              mountPath: /var/run/secrets/amazonaws.com/serviceaccount/
+            {{- end }}
 
       volumes:
         - name: certificates
           secret:
             secretName: registry-secret-manager-tls
+        {{- if $.Values.ecr.role }}
+        - name: aws-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: https://sts.amazonaws.com
+                  expirationSeconds: 10800 # 3 hours since the secret is also renewed every 3 hours
+                  path: token
+        {{- end }}

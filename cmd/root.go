@@ -157,8 +157,13 @@ func getCommand() *cobra.Command {
 				return fmt.Errorf("failed to add registries: %w", err)
 			}
 
+			cfg, err := config.GetConfig()
+			if err != nil {
+				return fmt.Errorf("failed to get the config: %w", err)
+			}
+
 			// Setup the manager
-			mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+			mgr, err := manager.New(cfg, manager.Options{
 				Host:    "",
 				Port:    ManagerPort,
 				CertDir: viper.GetString("cert-dir"),

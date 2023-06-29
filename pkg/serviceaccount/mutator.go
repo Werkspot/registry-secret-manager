@@ -79,8 +79,8 @@ func (m *Mutator) Handle(ctx context.Context, request admission.Request) admissi
 	return admission.PatchResponseFromRaw(request.Object.Raw, patched)
 }
 
-func (m *Mutator) InjectDecoder(decoder *admission.Decoder) (err error) {
+func (m *Mutator) InjectDecoder(decoder *admission.Decoder) error {
 	m.decoder = decoder
 
-	return
+	return nil
 }

@@ -47,6 +47,8 @@ linters:
     - goerr113
     - scopelint
     - funlen
+    - depguard
+    - exhaustruct
 
 issues:
   # Maximum issues count per one linter (set to 0 to disable)

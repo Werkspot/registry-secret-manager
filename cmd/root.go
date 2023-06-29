@@ -64,10 +64,10 @@ func (app *RegistrySecretManager) Run() int {
 	return 0
 }
 
-func (app *RegistrySecretManager) initLogger() (err error) {
+func (app *RegistrySecretManager) initLogger() error {
 	level, err := log.ParseLevel(viper.GetString("log-level"))
 	if err != nil {
-		return
+		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	log.SetOutput(os.Stdout)
@@ -77,18 +77,20 @@ func (app *RegistrySecretManager) initLogger() (err error) {
 		ForceColors:            true,
 	})
 
-	return
+	return nil
 }
 
-func readConfig() (config Config, err error) {
+func readConfig() (Config, error) {
+	var config Config
+
 	executable, err := os.Executable()
 	if err != nil {
-		return
+		return config, fmt.Errorf("failed to get the path of the current process: %w", err)
 	}
 
 	home, err := homedir.Dir()
 	if err != nil {
-		return
+		return config, fmt.Errorf("failed to get the home directory: %w", err)
 	}
 
 	viper.AddConfigPath(".")
@@ -102,14 +104,14 @@ func readConfig() (config Config, err error) {
 	viper.AutomaticEnv()
 
 	if err = viper.ReadInConfig(); err != nil {
-		return
+		return config, fmt.Errorf("failed to read the config: %w", err)
 	}
 
 	if err = viper.Unmarshal(&config); err != nil {
-		return
+		return config, fmt.Errorf("failed to parse the config: %w", err)
 	}
 
-	return
+	return config, nil
 }
 
 func bindFlags(flag *pflag.Flag) {
@@ -127,7 +129,7 @@ func getAvailableRegistries() map[string]ClosureRegistry {
 	}
 }
 
-func getCommand() (c *cobra.Command) {
+func getCommand() *cobra.Command {
 	availableRegistries := getAvailableRegistries()
 
 	var keys []string
@@ -149,10 +151,10 @@ func getCommand() (c *cobra.Command) {
 	return &cobra.Command{
 		Use:   "registry-secret-manager",
 		Short: "Manages the creation and distribution of credentials for container registries",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			registries, err := parseEnabledRegistries(availableRegistries)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to add registries: %w", err)
 			}
 
 			// Setup the manager
@@ -176,24 +178,24 @@ func getCommand() (c *cobra.Command) {
 			// Add healthz and readyz check
 			err = mgr.AddHealthzCheck("ping", healthz.Ping)
 			if err != nil {
-				return fmt.Errorf("failed to add ping healthz check")
+				return fmt.Errorf("failed to add ping healthz check: %w", err)
 			}
 
 			err = mgr.AddReadyzCheck("ping", healthz.Ping)
 			if err != nil {
-				return fmt.Errorf("failed to add ping readyz check")
+				return fmt.Errorf("failed to add ping readyz check: %w", err)
 			}
 
 			// Setup a new controller to reconcile ServiceAccounts
 			err = serviceaccount.NewController(mgr, registries)
 			if err != nil {
-				return
+				return fmt.Errorf("failed to add the serviceaccount controller: %w", err)
 			}
 
 			// Setup a new controller to reconcile Secrets
 			err = secret.NewController(mgr, registries)
 			if err != nil {
-				return
+				return fmt.Errorf("failed to add the secret controller: %w", err)
 			}
 
 			// Start the controller manager
@@ -204,13 +206,16 @@ func getCommand() (c *cobra.Command) {
 				return fmt.Errorf("unable to start manager: %w", err)
 			}
 
-			return
+			return nil
 		},
 	}
 }
 
-func parseEnabledRegistries(availableRegistries map[string]ClosureRegistry) (registries []registry.Registry, err error) {
-	for _, registryName := range viper.GetStringSlice("registry") {
+func parseEnabledRegistries(availableRegistries map[string]ClosureRegistry) ([]registry.Registry, error) {
+	var registries []registry.Registry
+
+	slice := viper.GetStringSlice("registry")
+	for _, registryName := range slice {
 		f, ok := availableRegistries[registryName]
 		if !ok {
 			return nil, fmt.Errorf("unknown registry %s", registryName)
@@ -223,5 +228,5 @@ func parseEnabledRegistries(availableRegistries map[string]ClosureRegistry) (reg
 		return nil, fmt.Errorf("at least one registry must be defined")
 	}
 
-	return
+	return registries, nil
 }

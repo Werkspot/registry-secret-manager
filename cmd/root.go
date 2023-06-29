@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -162,45 +163,9 @@ func getCommand() *cobra.Command {
 				return fmt.Errorf("failed to get the config: %w", err)
 			}
 
-			// Setup the manager
-			mgr, err := manager.New(cfg, manager.Options{
-				Host:    "",
-				Port:    ManagerPort,
-				CertDir: viper.GetString("cert-dir"),
-
-				HealthProbeBindAddress: ":8080",
-				MetricsBindAddress:     ":8081",
-
-				LeaderElection:             true,
-				LeaderElectionID:           "registry-secret-manager",
-				LeaderElectionNamespace:    "registry-secret-manager",
-				LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
-			})
+			mgr, err := setupManager(cfg, registries)
 			if err != nil {
-				return fmt.Errorf("unable to set up overall controller manager: %w", err)
-			}
-
-			// Add healthz and readyz check
-			err = mgr.AddHealthzCheck("ping", healthz.Ping)
-			if err != nil {
-				return fmt.Errorf("failed to add ping healthz check: %w", err)
-			}
-
-			err = mgr.AddReadyzCheck("ping", healthz.Ping)
-			if err != nil {
-				return fmt.Errorf("failed to add ping readyz check: %w", err)
-			}
-
-			// Setup a new controller to reconcile ServiceAccounts
-			err = serviceaccount.NewController(mgr, registries)
-			if err != nil {
-				return fmt.Errorf("failed to add the serviceaccount controller: %w", err)
-			}
-
-			// Setup a new controller to reconcile Secrets
-			err = secret.NewController(mgr, registries)
-			if err != nil {
-				return fmt.Errorf("failed to add the secret controller: %w", err)
+				return fmt.Errorf("failed to setup the manager: %w", err)
 			}
 
 			// Start the controller manager
@@ -234,4 +199,47 @@ func parseEnabledRegistries(availableRegistries map[string]ClosureRegistry) ([]r
 	}
 
 	return registries, nil
+}
+
+func setupManager(cfg *rest.Config, registries []registry.Registry) (manager.Manager, error) {
+	mgr, err := manager.New(cfg, manager.Options{
+		Host:    "",
+		Port:    ManagerPort,
+		CertDir: viper.GetString("cert-dir"),
+
+		HealthProbeBindAddress: ":8080",
+		MetricsBindAddress:     ":8081",
+
+		LeaderElection:             true,
+		LeaderElectionID:           "registry-secret-manager",
+		LeaderElectionNamespace:    "registry-secret-manager",
+		LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to set up overall controller manager: %w", err)
+	}
+
+	// Add healthz and readyz check
+	err = mgr.AddHealthzCheck("ping", healthz.Ping)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add ping healthz check: %w", err)
+	}
+
+	err = mgr.AddReadyzCheck("ping", healthz.Ping)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add ping readyz check: %w", err)
+	}
+
+	// Setup a new controller to reconcile ServiceAccounts and Secrets
+	err = serviceaccount.NewController(mgr, registries)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add the serviceaccount controller: %w", err)
+	}
+
+	err = secret.NewController(mgr, registries)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add the secret controller: %w", err)
+	}
+
+	return mgr, nil
 }

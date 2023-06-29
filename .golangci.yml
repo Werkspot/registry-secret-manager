@@ -49,6 +49,7 @@ linters:
     - funlen
     - depguard
     - exhaustruct
+    - ireturn
 
 issues:
   # Maximum issues count per one linter (set to 0 to disable)
